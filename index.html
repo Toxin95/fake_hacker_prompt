@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fake Hacker Prompt</title>
+  <style>
+    :root{
+      --bg:#000;
+      --green:#39ff14; /* neon green */
+      --muted:#0f0f0f;
+      --font: 'Courier New', Courier, monospace;
+    }
+    html,body{height:100%;margin:0}
+    body{background:var(--bg);color:var(--green);font-family:var(--font);-webkit-font-smoothing:antialiased}
+
+    /* Controls area */
+    .controls{
+      max-width:900px;margin:40px auto;padding:18px;background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border:1px solid rgba(57,255,20,0.06);border-radius:8px;color:#cfdccf;
+      box-shadow:0 6px 30px rgba(0,0,0,0.6)
+    }
+    label{display:block;font-size:13px;margin-bottom:8px;color:#9ceb89}
+    textarea{width:100%;min-height:120px;background:#051206;border:1px solid rgba(57,255,20,0.08);color:var(--green);padding:12px;border-radius:6px;resize:vertical;font-family:var(--font);font-size:15px}
+    .row{display:flex;gap:12px;align-items:center;margin-top:12px}
+    input[type="number"], input[type="text"]{width:120px;padding:8px;border-radius:6px;border:1px solid rgba(57,255,20,0.06);background:#041104;color:var(--green);font-family:var(--font)}
+    button{background:transparent;border:1px solid rgba(57,255,20,0.18);color:var(--green);padding:10px 14px;border-radius:6px;cursor:pointer;font-weight:700}
+    button:hover{filter:brightness(1.15)}
+    .muted{color:#8aa88a;font-size:13px}
+
+    /* Fullscreen terminal overlay */
+    .terminal-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;padding:36px;z-index:999;align-items:flex-start}
+    .terminal-window{width:100%;max-width:1400px;flex:1;overflow:auto}
+    .prompt-line{display:flex;gap:12px;align-items:flex-start}
+    .prompt-prefix{color:var(--green);font-weight:700}
+    .typed{white-space:pre-wrap;word-break:break-word;font-size:18px;line-height:1.45}
+
+    /* cursor */
+    .cursor{display:inline-block;width:10px;height:20px;background:var(--green);margin-left:2px;vertical-align:bottom;animation:blink 1s steps(2, start) infinite}
+    @keyframes blink{50%{opacity:0}}
+
+    /* top-right small controls */
+    .top-controls{position:fixed;right:18px;top:18px;z-index:1000;display:flex;gap:8px}
+    .small-btn{background:transparent;border:1px solid rgba(255,255,255,0.04);color:#b6f7a7;padding:8px 10px;border-radius:6px;cursor:pointer}
+
+    /* small responsive tweaks */
+    @media (max-width:600px){.controls{margin:20px;padding:12px}
+      .typed{font-size:16px}
+    }
+  </style>
+</head>
+<body>
+  <main class="controls" role="main" aria-labelledby="title">
+    <h1 id="title" style="margin:0 0 8px;color:var(--green)">Fake Hacker Prompt — Generator</h1>
+    <p class="muted">Inserisci il testo che vuoi venga "digitato" nello schermo nero in stile terminale. Scegli la velocità (caratteri al second o) e premi <strong>Inizia</strong>.</p>
+
+    <label for="inputText">Testo (puoi incollare anche linee multiple):</label>
+    <textarea id="inputText" placeholder="Esempio:
+Accesso a: 10.0.0.42 - OK
+Dumping memory...
+Injecting payload..." spellcheck="false"></textarea>
+
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div>
+          <label for="speed">Velocità (caratteri/sec)</label>
+          <input id="speed" type="number" min="1" value="60" />
+        </div>
+        <div>
+          <label for="prefix">Prompt prefix</label>
+          <input id="prefix" type="text" value="user@system:~$" />
+        </div>
+        <div>
+          <label for="cursor">Mostra cursore</label>
+          <select id="cursor">
+            <option value="block">Block</option>
+            <option value="bar">Bar</option>
+            <option value="none">Nessuno</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:13px;color:#9ceb89">Incremento velocità</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px" title="Se spuntato la velocità aumenterà progressivamente">
+            <input id="incToggle" type="checkbox" /> <span class="muted">Abilita incremento</span>
+          </label>
+        </div>
+        <div>
+          <label for="incPercent">Incremento % / sec</label>
+          <input id="incPercent" type="number" min="0" value="10" />
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center">
+        <div>
+          <label for="startDelay">Ritardo di avvio (s)</label>
+          <input id="startDelay" type="number" min="0" value="0" />
+        </div>
+
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:13px;color:#9ceb89">Modalità incremento</label>
+          <select id="incMode" title="Seleziona come applicare l'incremento">
+            <option value="linear">Lineare (aumenta ogni secondo)</option>
+            <option value="perChar">Per carattere (aumenta ogni X caratteri)</option>
+          </select>
+        </div>
+
+        <div style="display:flex;flex-direction:column">
+          <label for="perCharStep" style="font-size:13px;color:#9ceb89">Step per char</label>
+          <input id="perCharStep" type="number" min="1" value="50" title="Usato solo se modalità 'Per carattere'" />
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="startBtn">Inizia</button>
+          <button id="previewBtn">Anteprima (nascosto)</button>
+        </div>
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:14px">Suggerimento: usa testo multilinea e simboli per effetto realistico. Premi Esc per chiudere lo schermo.</p>
+  </main>
+
+  <!-- terminal overlay (hidden until started) -->
+  <div id="overlay" class="terminal-overlay" style="display:none" role="dialog" aria-modal="true">
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;max-width:1400px;margin-bottom:16px">
+      <div style="display:flex;gap:12px;align-items:center">
+        <strong style="color:var(--green)">SYSTEM</strong>
+        <span class="muted">Initializing sequence...</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="small-btn" id="pauseBtn">Pausa</button>
+        <button class="small-btn" id="closeBtn">Esci (Esc)</button>
+      </div>
+    </div>
+
+    <div class="terminal-window" id="terminalWindow" tabindex="0" aria-live="polite">
+      <!-- dynamic typing will be injected here -->
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const inputText = document.getElementById('inputText');
+      const startBtn = document.getElementById('startBtn');
+      const previewBtn = document.getElementById('previewBtn');
+      const overlay = document.getElementById('overlay');
+      const terminalWindow = document.getElementById('terminalWindow');
+      const speedInput = document.getElementById('speed');
+      const prefixInput = document.getElementById('prefix');
+      const cursorSelect = document.getElementById('cursor');
+      const pauseBtn = document.getElementById('pauseBtn');
+      const closeBtn = document.getElementById('closeBtn');
+      const incToggle = document.getElementById('incToggle');
+      const incPercent = document.getElementById('incPercent');
+      const startDelay = document.getElementById('startDelay');
+      const incMode = document.getElementById('incMode');
+      const perCharStep = document.getElementById('perCharStep');
+
+      let timeoutId = null;
+      let isPaused = false;
+      let typingState = null;
+
+      function createCursor(type){
+        if(type === 'none') return '';
+        if(type === 'bar') return '<span class="cursor" style="width:3px;height:20px"></span>';
+        return '<span class="cursor"></span>';
+      }
+
+      function startTyping({text, speed, prefix, cursorType, incOptions}){
+        overlay.style.display = 'flex';
+        terminalWindow.innerHTML = '';
+        terminalWindow.focus();
+        isPaused = false;
+        pauseBtn.textContent = 'Pausa';
+
+        const full = String(text || '');
+        let charsPerSec = Number(speed) || 60;
+
+        const cursorHtml = createCursor(cursorType);
+        let idx = 0;
+        let lastIncreaseAt = Date.now();
+        let charsSinceLast = 0;
+
+        typingState = {full, charsPerSec, idx};
+
+        function step(){
+          if(isPaused) return;
+
+          // possibly increase speed depending on mode
+          if(incOptions.enabled){
+            const now = Date.now();
+            if(incOptions.mode === 'linear'){
+              if(now - lastIncreaseAt >= 1000){
+                const times = Math.floor((now - lastIncreaseAt) / 1000);
+                for(let t=0;t<times;t++){
+                  charsPerSec = charsPerSec * (1 + incOptions.percent / 100);
+                }
+                lastIncreaseAt = now;
+              }
+            } else if(incOptions.mode === 'perChar'){
+              charsSinceLast++;
+              if(charsSinceLast >= incOptions.perCharStep){
+                charsPerSec = charsPerSec * (1 + incOptions.percent / 100);
+                charsSinceLast = 0;
+              }
+            }
+          }
+
+          idx += 1;
+          const visible = full.slice(0, idx);
+
+          // Build lines: first line WITHOUT any prompt-prefix, subsequent lines start with >>>
+          const lines = visible.split('\n').map((line, i, arr) => {
+            if(i === 0){
+              // first line: show only the content (no prefix)
+              if(i === arr.length - 1){
+                return `<span class=\"typed\">${escapeHtml(line)}</span>${cursorHtml}`;
+              }
+              return `<span class=\"typed\">${escapeHtml(line)}</span>\n`;
+            }
+            // subsequent lines: show >>> as prefix
+            if(i === arr.length - 1){
+              return `<span class=\"prompt-prefix\">&gt;&gt;&gt; </span><span class=\"typed\">${escapeHtml(line)}</span>${cursorHtml}`;
+            }
+            return `<span class=\"prompt-prefix\">&gt;&gt;&gt; </span><span class=\"typed\">${escapeHtml(line)}</span>\n`;
+          }).join('<br>');
+
+          terminalWindow.innerHTML = lines;
+          terminalWindow.scrollTop = terminalWindow.scrollHeight;
+
+          if(idx < full.length){
+            const ms = Math.max(3, Math.round(1000 / charsPerSec));
+            timeoutId = setTimeout(step, ms);
+          }
+        }
+
+        // start after given delay
+        const delayMs = Math.max(0, Number(startDelay.value || 0)) * 1000;
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(step, delayMs || 200);
+      }
+
+      function escapeHtml(str){
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+
+      startBtn.addEventListener('click', ()=>{
+        const text = inputText.value;
+        if(!text || !text.trim()){ alert('Inserisci del testo prima di avviare.'); return; }
+
+        const incOptions = {
+          enabled: incToggle.checked,
+          percent: Math.max(0, Number(incPercent.value || 0)),
+          mode: incMode.value,
+          perCharStep: Math.max(1, Number(perCharStep.value || 50))
+        };
+
+        startTyping({
+          text,
+          speed: speedInput.value,
+          prefix: prefixInput.value,
+          cursorType: cursorSelect.value,
+          incOptions
+        });
+      });
+
+      previewBtn.addEventListener('click', ()=>{
+        const text = inputText.value || 'Sample: hello world';
+        const previewBoxId = 'previewBox';
+        let box = document.getElementById(previewBoxId);
+        if(!box){
+          box = document.createElement('div');
+          box.id = previewBoxId;
+          box.style.marginTop = '18px';
+          box.style.padding = '12px';
+          box.style.background = '#041104';
+          box.style.border = '1px solid rgba(57,255,20,0.06)';
+          box.style.borderRadius = '6px';
+          box.style.color = 'var(--green)';
+          document.querySelector('.controls').appendChild(box);
+        }
+
+        // First line: no prefix. Subsequent lines: show >>>
+        box.innerHTML = '<span class="typed"></span>' + createCursor(cursorSelect.value);
+        const typedSpan = box.querySelector('.typed');
+        typedSpan.textContent = '';
+        const full = text;
+
+        let charsPerSec = Number(speedInput.value) || 60;
+        const incEnabled = incToggle.checked;
+        const incP = Math.max(0, Number(incPercent.value || 0));
+        const mode = incMode.value;
+        const perStep = Math.max(1, Number(perCharStep.value || 50));
+
+        let i=0, charsSince=0, lastInc = Date.now();
+        function pstep(){
+          i++;
+          const visible = full.slice(0,i);
+          // build visible with first line no prefix and others with >>>
+          const parts = visible.split('\n');
+          const built = parts.map((line, idx) => {
+            if(idx === 0) return escapeHtml(line);
+            return '&gt;&gt;&gt; ' + escapeHtml(line);
+          }).join('\n');
+          typedSpan.innerHTML = built;
+
+          if(incEnabled){
+            const now = Date.now();
+            if(mode === 'linear'){
+              if(now - lastInc >= 1000){
+                const times = Math.floor((now - lastInc)/1000);
+                for(let t=0;t<times;t++) charsPerSec = charsPerSec * (1 + incP/100);
+                lastInc = now;
+              }
+            } else {
+              charsSince++;
+              if(charsSince >= perStep){ charsPerSec = charsPerSec * (1 + incP/100); charsSince=0; }
+            }
+          }
+
+          const ms = Math.max(3, Math.round(1000 / charsPerSec));
+          if(i<full.length) setTimeout(pstep, ms);
+        }
+        const delayMs = Math.max(0, Number(startDelay.value || 0)) * 1000;
+        setTimeout(pstep, delayMs);
+      });
+
+      pauseBtn.addEventListener('click', ()=>{
+        if(overlay.style.display === 'none') return;
+        isPaused = !isPaused;
+        pauseBtn.textContent = isPaused ? 'Riprendi' : 'Pausa';
+        if(!isPaused && typingState){
+          const rawVisible = Array.from(terminalWindow.querySelectorAll('.typed')).map(s=>s.textContent).join('\n');
+          const fullText = typingState.full;
+          const startIdx = rawVisible.length;
+          const remaining = fullText.slice(startIdx);
+          const composite = rawVisible + remaining;
+          clearTimeout(timeoutId);
+          startTyping({text: composite, speed: typingState.charsPerSec || speedInput.value, prefix: prefixInput.value, cursorType: cursorSelect.value, incOptions: {enabled: incToggle.checked, percent: Number(incPercent.value||0), mode: incMode.value, perCharStep: Number(perCharStep.value||50)}});
+        }
+      });
+
+      closeBtn.addEventListener('click', closeOverlay);
+      window.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeOverlay(); });
+      function closeOverlay(){ overlay.style.display = 'none'; clearTimeout(timeoutId); terminalWindow.innerHTML = ''; }
+      overlay.addEventListener('click', (e)=>{ if(e.target === overlay) closeOverlay(); });
+
+    })();
+  </script>
+</body>
+</html>
