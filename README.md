@@ -2,7 +2,7 @@
 
 A simple **hacker-style terminal generator** built with pure HTML, CSS, and JavaScript. This single `index.html` file displays a black screen with neon green text being typed at a configurable speed, with optional speed increase and start delay.
 
-##[Try it on GitHub Pages](https://toxin95.github.io/fake_hacker_prompt/)
+## [Try it on GitHub Pages](https://toxin95.github.io/fake_hacker_prompt/)
 
 ## Repository Contents
 
